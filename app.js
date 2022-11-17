@@ -2,6 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const mongoose = require('mongoose');
+// const md5 = require('md5');
+const bcrypt = require('bcrypt');
+const saltRounds = 12;
 
 main().catch(err => console.log(err));
 
@@ -25,17 +28,19 @@ app.get('/register', (req, res) => {
 })
 
 app.post('/register', (req, res) => {
-    const user = new User({
-        email: req.body.username,
-        password: req.body.password
+    bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
+        const user = new User({
+            email: req.body.username,
+            password: hash
+        })
+        user.save((err) => {
+            if (err) {
+                console.log(err)
+            } else {
+                res.render('secrets')
+            }
+        })
     })
-    user.save((err) => {
-        if (err) {
-            console.log(err)
-        } else {
-            res.render('secrets')
-        }
-    });
 })
 
 app.get('/login', (req, res) => {
@@ -49,13 +54,29 @@ app.post('/login', (req, res) => {
             console.log(err)
         } else {
             if (foundUser) {
-                if (foundUser.password === password) {
-                    res.render('secrets')
-                }
+                bcrypt.compare(password, foundUser.password, function (error, result) {
+                    if (result === true) {
+                        res.render('secrets')
+                    }
+                })
             }
         }
     })
 })
+
+// app.post('/login', async (req, res) => {
+//     const { username, password } = req.body;
+//     const foundUser = await User.findOne({ email: username });
+//     bcrypt.compare(password, foundUser.password)
+//         .then((result) => {
+//             console.log(result)
+//         })
+//         .catch((error) => {
+//             console.log(error)
+//         });
+//     res.render('secrets')
+
+// })
 
 app.listen(3000, () => {
     console.log('LISTENING ON PORT 3000')
